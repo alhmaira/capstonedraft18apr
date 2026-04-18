@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>QC Inspection</title>
+
+<link rel="stylesheet" href="layout.css">
+<link rel="stylesheet" href="qcinspection.css">
+
+</head>
+
+<body>
+
+<header>
+    <div style="display:flex; align-items:center; gap:15px;">
+        <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+        <div class="title">Supplier Performance Tracker System</div>
+    </div>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+</header>
+
+<div class="container">
+
+<div class="sidebar">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="#">Supplier Ranking</a>
+    <a href="report.html">Summary Report</a>
+    <a href="delivery.html">Delivery</a>
+    <a href="delivhistory.html">Delivery History</a>
+    <a href="qcinspection.html" class="active">QC Inspection</a>
+    <a href="qchistory.html">QC History</a>
+</div>
+
+<div class="content">
+
+<div class="topbar">
+    <h1>Quality Control Inspection</h1>
+</div>
+
+<div class="card">
+    <h3>Select Delivery</h3>
+
+    <label>Delivery *</label>
+
+    <div class="custom-dropdown">
+        <input type="text" id="deliverySearch" placeholder="Select delivery..." 
+        onkeyup="filterDropdown()" onclick="toggleDropdown()">
+
+        <div id="dropdownList" class="dropdown-list"></div>
+    </div>
+</div>
+
+<div id="deliveryDetail"></div>
+
+</div>
+</div>
+
+<script>
+
+/* BASIC */
+function logout() {
+    localStorage.removeItem("isLogin");
+    window.location.href = "login.html";
+}
+
+function toggleSidebar() {
+    document.querySelector(".sidebar").classList.toggle("hide");
+    document.querySelector(".content").classList.toggle("full");
+}
+
+/* DATA */
+let deliveryData = JSON.parse(localStorage.getItem("deliveryData")) || [];
+deliveryData.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+let selectedIndex = null;
+
+/* DROPDOWN */
+function renderDropdown(list) {
+    const dropdown = document.getElementById("dropdownList");
+    dropdown.innerHTML = "";
+
+    list.forEach(d => {
+        const originalIndex = deliveryData.indexOf(d);
+
+        const div = document.createElement("div");
+        div.className = "dropdown-item";
+        div.textContent = `${d.supplier} - ${d.po} (${d.date})`;
+
+        div.onclick = () => {
+            selectedIndex = originalIndex;
+
+            document.getElementById("deliverySearch").value =
+                `${d.supplier} - ${d.po} (${d.date})`;
+
+            dropdown.style.display = "none";
+            showDetail(d);
+        };
+
+        dropdown.appendChild(div);
+    });
+}
+
+renderDropdown(deliveryData);
+
+function toggleDropdown() {
+    document.getElementById("dropdownList").style.display = "block";
+}
+
+function filterDropdown() {
+    const keyword = document.getElementById("deliverySearch").value.toLowerCase();
+
+    const filtered = deliveryData.filter(d =>
+        `${d.supplier} ${d.po} ${d.date}`.toLowerCase().includes(keyword)
+    );
+
+    renderDropdown(filtered);
+    document.getElementById("dropdownList").style.display = "block";
+}
+
+/* DETAIL */
+function showDetail(d) {
+    const container = document.getElementById("deliveryDetail");
+
+    container.innerHTML = `
+    <div class="detail-card">
+        <h3>Delivery Detail</h3>
+        <p><b>Supplier:</b> ${d.supplier}</p>
+        <p><b>PO:</b> ${d.po}</p>
+        <p><b>Date:</b> ${d.date}</p>
+
+        <hr>
+
+        <h3>QC Inspection</h3>
+
+        <label>Line Stop</label>
+        <select id="lineStop" onchange="calcQC()">
+            <option value="">Select</option>
+            <option value="40">Yes</option>
+            <option value="0">No</option>
+        </select>
+
+        <label>NG (Reject)</label>
+        <input type="number" id="ng" oninput="calcQC()">
+
+        <label>Supply Qty</label>
+        <input type="number" id="supply" readonly>
+
+        <label>PPM</label>
+        <input type="text" id="ppm" readonly>
+
+        <label>PPM Score</label>
+        <input type="text" id="ppmScore" readonly>
+
+        <label>Problem Rank</label>
+        <select id="rank" onchange="calcQC()">
+            <option value="">Select</option>
+            <option value="25">A</option>
+            <option value="10">B</option>
+            <option value="5">C</option>
+        </select>
+
+        <label>FPPK Reply</label>
+        <select id="fppk" onchange="calcQC()">
+            <option value="">Select</option>
+            <option value="0">No Problem</option>
+            <option value="0">On Time</option>
+            <option value="10">Delay</option>
+            <option value="20">No Reply</option>
+        </select>
+
+        <hr>
+
+        <h3>Total Score</h3>
+        <div class="total-box" id="qcTotal">—</div>
+
+        <button onclick="saveQC(${selectedIndex})">Save QC</button>
+    </div>
+    `;
+
+    /* 🔥 FIX ONLY: tarik qtyReceived dari delivery */
+    const supplyInput = document.getElementById('supply');
+    if (supplyInput) {
+        supplyInput.value = Number(d.qtyReceived) || 0;
+    }
+}
+
+/* CALCULATION */
+function calcQC() {
+
+    const lineStop = Number(document.getElementById('lineStop').value);
+    const ng = Number(document.getElementById('ng').value);
+    const supply = Number(document.getElementById('supply').value);
+    const rank = Number(document.getElementById('rank').value);
+    const fppk = Number(document.getElementById('fppk').value);
+
+    let lineStopScore = isNaN(lineStop) ? NaN : lineStop;
+    let ppmScore = NaN;
+
+    if (!isNaN(ng) && !isNaN(supply) && supply !== 0) {
+        let ppm = (ng / supply) * 1000000;
+        document.getElementById('ppm').value = Math.round(ppm);
+
+        if (ppm === 0) ppmScore = 0;
+        else if (ppm <= 20) ppmScore = 5;
+        else if (ppm <= 200) ppmScore = 10;
+        else ppmScore = 15;
+
+        document.getElementById('ppmScore').value = ppmScore;
+    } else {
+        document.getElementById('ppm').value = '';
+        document.getElementById('ppmScore').value = '';
+    }
+
+    let rankScore = isNaN(rank) ? NaN : rank;
+    let fppkScore = isNaN(fppk) ? NaN : fppk;
+
+    const penalties = [lineStopScore, ppmScore, rankScore, fppkScore];
+
+    if (penalties.some(v => isNaN(v))) {
+        document.getElementById('qcTotal').innerText = '—';
+        return;
+    }
+
+    const totalPenalty = penalties.reduce((a, b) => a + b, 0);
+    let finalScore = 100 - totalPenalty;
+
+    finalScore = Math.max(0, Math.min(100, finalScore));
+
+    document.getElementById('qcTotal').innerText = finalScore.toFixed(1);
+}
+
+/* SAVE */
+function saveQC(index) {
+    const delivery = deliveryData[index];
+
+    const total = document.getElementById("qcTotal").innerText;
+
+    if (total === '—') {
+        alert("Lengkapi data QC dulu!");
+        return;
+    }
+
+    const qcData = {
+        supplier: delivery.supplier,
+        po: delivery.po,
+        date: delivery.date,
+        lineStop: document.getElementById("lineStop").value,
+        ng: document.getElementById("ng").value,
+        supply: document.getElementById("supply").value,
+        ppm: document.getElementById("ppm").value,
+        ppmScore: document.getElementById("ppmScore").value,
+        rank: document.getElementById("rank").value,
+        fppk: document.getElementById("fppk").value,
+        total: total
+    };
+
+    let qcHistory = JSON.parse(localStorage.getItem("qcData")) || [];
+    qcHistory.push(qcData);
+    localStorage.setItem("qcData", JSON.stringify(qcHistory));
+
+    document.getElementById("popup").style.display = "flex";
+}
+
+function closePopup() {
+    document.getElementById("popup").style.display = "none";
+}
+
+</script>
+
+<div id="popup" class="popup">
+    <div class="popup-box">
+        <p>✔ Data saved successfully</p>
+        <button onclick="closePopup()">OK</button>
+    </div>
+</div>
+
+</body>
+</html>

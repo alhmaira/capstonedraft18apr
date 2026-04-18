@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SPT Dashboard</title>
+
+<!-- CSS -->
+<link rel="stylesheet" href="layout.css">
+<link rel="stylesheet" href="dashboard.css">
+
+<!-- CHART -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- LOGIN CHECK -->
+<script>
+if (localStorage.getItem("isLogin") !== "true") {
+    window.location.href = "login.html";
+}
+</script>
+
+</head>
+
+<body>
+
+<!-- HEADER -->
+<header>
+    <div style="display:flex; align-items:center; gap:15px;">
+        <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+        <div class="title">Supplier Performance Tracker System</div>
+    </div>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+</header>
+
+<div class="container">
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <a href="dashboard.html" class="active">Dashboard</a>
+  <a href="#">Supplier Ranking</a>
+  <a href="report.html">Summary Report</a>
+  <a href="delivery.html">Delivery</a>
+  <a href="delivhistory.html">Delivery History</a>
+  <a href="qcinspection.html">QC Inspection</a>
+  <a href="qchistory.html">QC History</a>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+<div class="topbar">
+    <h1>Purchasing Dashboard</h1>
+    <p id="date"></p>
+</div>
+
+<!-- CARDS -->
+<div class="cards">
+    <div class="card">
+        <h3>Total Suppliers</h3>
+        <p id="totalSuppliers">0</p>
+    </div>
+
+    <div class="card">
+        <h3>Avg Performance</h3>
+        <p id="avgPerformance">0.0</p>
+    </div>
+
+    <div class="card">
+        <h3>Total Delivery</h3>
+        <p>120</p>
+    </div>
+
+    <div class="card">
+        <h3>Reject Rate</h3>
+        <p>8%</p>
+    </div>
+</div>
+
+<!-- OVERALL -->
+<div class="overall">
+    <h2>Overall System Performance</h2>
+    <p id="overallScore">0.0</p>
+</div>
+
+<!-- CHART -->
+<div class="chart-section">
+    <div class="chart-box">
+        <h3>Supplier Performance</h3>
+        <canvas id="barChart"></canvas>
+    </div>
+
+    <div class="chart-box">
+        <h3>QC Distribution</h3>
+        <canvas id="pieChart"></canvas>
+    </div>
+</div>
+
+<!-- LIST -->
+<div class="section">
+    <div class="list-box">
+        <h3>Top 5 Best Suppliers</h3>
+        <div id="bestList"></div>
+    </div>
+
+    <div class="list-box">
+        <h3>Top 5 Worst Suppliers</h3>
+        <div id="worstList"></div>
+    </div>
+</div>
+
+</div>
+</div>
+
+<script>
+
+/* LOGOUT */
+function logout() {
+    localStorage.removeItem("isLogin");
+    window.location.href = "login.html";
+}
+
+/* SIDEBAR */
+function toggleSidebar() {
+    const sidebar = document.querySelector(".sidebar");
+    const content = document.querySelector(".content");
+
+    sidebar.classList.toggle("hide");
+    content.classList.toggle("full");
+}
+
+/* DATE */
+document.getElementById("date").innerText = new Date().toDateString();
+
+/* DATA */
+const suppliers = [
+    { name: "ABC Supplier", score: 60 },
+    { name: "XYZ Supplier", score: 50 },
+    { name: "PT Maju Jaya", score: 70 },
+    { name: "PT Sumber Rezeki", score: 66 },
+    { name: "PT Makmur", score: 53 },
+    { name: "PT Buruk", score: 60 },
+    { name: "PT Parah", score: 55 }
+];
+
+/* SUMMARY */
+document.getElementById("totalSuppliers").innerText = suppliers.length;
+
+let total = suppliers.reduce((sum, s) => sum + s.score, 0);
+let avg = (total / suppliers.length).toFixed(1);
+
+document.getElementById("avgPerformance").innerText = avg;
+document.getElementById("overallScore").innerText = avg;
+
+/* SORT */
+let sorted = [...suppliers].sort((a,b) => b.score - a.score);
+let best = sorted.slice(0,5);
+let worst = sorted.slice(-5).reverse();
+
+/* RENDER LIST */
+function renderList(data, id, cls) {
+    let el = document.getElementById(id);
+    el.innerHTML = "";
+    data.forEach((item, i) => {
+        el.innerHTML += `
+        <div class="item">
+            <span>${i+1}. ${item.name}</span>
+            <span class="${cls}">${item.score}</span>
+        </div>`;
+    });
+}
+
+renderList(best, "bestList", "good");
+renderList(worst, "worstList", "bad");
+
+/* BAR CHART */
+new Chart(document.getElementById('barChart'), {
+    type: 'bar',
+    data: {
+        labels: suppliers.map(s => s.name),
+        datasets: [{
+            label: 'Score',
+            data: suppliers.map(s => s.score)
+        }]
+    }
+});
+
+/* PIE CHART */
+new Chart(document.getElementById('pieChart'), {
+    type: 'doughnut',
+    data: {
+        labels: ['Good', 'Reject'],
+        datasets: [{
+            data: [92, 8]
+        }]
+    }
+});
+
+</script>
+
+</body>
+</html>

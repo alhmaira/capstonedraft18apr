@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SPT - Delivery</title>
+
+<link rel="stylesheet" href="layout.css">
+<link rel="stylesheet" href="delivery.css">
+</head>
+
+<body>
+
+<header>
+    <div style="display:flex; align-items:center; gap:15px;">
+        <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+        <div class="title">Supplier Performance Tracker System</div>
+    </div>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+</header>
+
+<div class="container">
+
+<div class="sidebar">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="#">Supplier Ranking</a>
+    <a href="report.html">Summary Report</a>
+    <a href="delivery.html" class="active">Delivery</a>
+    <a href="delivhistory.html">Delivery History</a>
+    <a href="qcinspection.html">QC Inspection</a>
+    <a href="qchistory.html">QC History</a>
+</div>
+
+<div class="content">
+
+<div class="topbar">
+    <h1>Delivery Input</h1>
+    <p id="date"></p>
+</div>
+
+<div class="form-card">
+<div class="section-title">Delivery Data</div>
+
+<div class="grid2">
+
+<!-- MONTH -->
+<div class="field">
+<label>Month</label>
+<select id="del-month">
+<option value="">Select Month</option>
+<option value="01">January</option>
+<option value="02">February</option>
+<option value="03">March</option>
+<option value="04">April</option>
+<option value="05">May</option>
+<option value="06">June</option>
+<option value="07">July</option>
+<option value="08">August</option>
+<option value="09">September</option>
+<option value="10">October</option>
+<option value="11">November</option>
+<option value="12">December</option>
+</select>
+</div>
+
+<!-- YEAR -->
+<div class="field">
+<label>Year</label>
+<select id="del-year"></select>
+</div>
+
+<div class="field">
+<label>Supplier</label>
+<select id="supplier">
+<option value="">Pilih Supplier</option>
+<option>PT Supplier A</option>
+<option>PT Supplier B</option>
+<option selected>PT Supplier C</option>
+</select>
+</div>
+
+<div class="field">
+<label>PO Number</label>
+<input type="text" id="po-num">
+</div>
+
+<div class="field">
+<label>On-Time Delivery</label>
+<select id="otd" onchange="calc()">
+<option value="">Pilih status</option>
+<option value="0">No Delay</option>
+<option value="2">Delay 1 day</option>
+<option value="4">Delay 2 days</option>
+<option value="6">Delay 3 days</option>
+<option value="10">Delay > 3 days</option>
+</select>
+</div>
+
+<div class="field">
+<label>Quantity Ordered</label>
+<input type="number" id="qty-ord" oninput="calc()">
+</div>
+
+<div class="field">
+<label>Quantity Received</label>
+<input type="number" id="qty-rec" oninput="calc()">
+</div>
+
+<!-- PEMENUHAN -->
+<div class="field">
+<label>Pemenuhan Order (%)</label>
+<input type="text" id="fulfillment" readonly>
+</div>
+
+<div class="field">
+<label>Delivery Method</label>
+<select id="del-method" onchange="calc()">
+<option value="">Pilih method</option>
+<option value="0">Normal</option>
+<option value="4">Abnormal</option>
+</select>
+</div>
+
+<div class="field">
+<label>Premium Freight (Rp)</label>
+<input type="number" id="premium" oninput="calc()">
+</div>
+
+<div class="field field-full">
+<label>DPS Reply</label>
+<select id="dps" onchange="calc()">
+<option value="">Pilih reply</option>
+<option value="0">No Problem</option>
+<option value="0">On Time</option>
+<option value="10">Delay</option>
+<option value="20">No Reply</option>
+</select>
+</div>
+
+</div>
+</div>
+
+<!-- SCORE -->
+<div class="score-card">
+<div class="section-title">Total Index</div>
+
+<div class="score-row"><span>Quantity</span><span id="s-qty">—</span></div>
+<div class="score-row"><span>OTD</span><span id="s-otd">—</span></div>
+<div class="score-row"><span>Method</span><span id="s-method">—</span></div>
+<div class="score-row"><span>Premium</span><span id="s-premium">—</span></div>
+<div class="score-row"><span>DPS</span><span id="s-dps">—</span></div>
+
+<div class="total-box">
+<div>
+<div class="total-label">Score</div>
+<div class="total-num" id="total-score">—</div>
+</div>
+</div>
+</div>
+
+<button class="btn-save" onclick="save()">Save Data</button>
+
+</div>
+</div>
+
+<!-- POPUP -->
+<div id="popup" class="popup">
+<div class="popup-box">
+<p>✔ Data saved successfully</p>
+<button onclick="closePopup()">OK</button>
+</div>
+</div>
+
+<script>
+
+/* DATE */
+document.getElementById("date").innerText = new Date().toDateString();
+
+/* YEAR */
+const yearSelect = document.getElementById("del-year");
+const currentYear = new Date().getFullYear();
+
+for (let i = currentYear - 3; i <= currentYear + 2; i++) {
+let opt = document.createElement("option");
+opt.value = i;
+opt.textContent = i;
+if (i === currentYear) opt.selected = true;
+yearSelect.appendChild(opt);
+}
+
+/* CALC */
+function calc() {
+const ord = parseFloat(document.getElementById('qty-ord').value);
+const rec = parseFloat(document.getElementById('qty-rec').value);
+const otd = parseInt(document.getElementById('otd').value);
+const method = parseInt(document.getElementById('del-method').value);
+const prem = parseFloat(document.getElementById('premium').value);
+const dps = parseInt(document.getElementById('dps').value);
+
+let fulfillment = null;
+let sQty = null;
+
+/* PEMENUHAN */
+if (!isNaN(ord) && !isNaN(rec) && ord !== 0) {
+fulfillment = (rec / ord) * 100;
+if (fulfillment > 100) fulfillment = 100;
+
+document.getElementById('fulfillment').value = fulfillment.toFixed(0) + "%";
+
+/* INDEX */
+if (fulfillment >= 95) sQty = 0;
+else if (fulfillment >= 85) sQty = 2;
+else if (fulfillment >= 75) sQty = 4;
+else if (fulfillment >= 65) sQty = 6;
+else sQty = 8;
+
+} else {
+document.getElementById('fulfillment').value = "";
+}
+
+/* PREMIUM */
+let sPrem = null;
+if (!isNaN(prem)) {
+if (prem === 0) sPrem = 0;
+else if (prem <= 500000) sPrem = 2;
+else if (prem <= 1000000) sPrem = 4;
+else if (prem <= 3000000) sPrem = 6;
+else sPrem = 8;
+}
+
+const sOtd = isNaN(otd) ? null : otd;
+const sMethod = isNaN(method) ? null : method;
+const sDps = isNaN(dps) ? null : dps;
+
+/* DISPLAY */
+document.getElementById('s-qty').textContent = sQty ?? '—';
+document.getElementById('s-otd').textContent = sOtd ?? '—';
+document.getElementById('s-method').textContent = sMethod ?? '—';
+document.getElementById('s-premium').textContent = sPrem ?? '—';
+document.getElementById('s-dps').textContent = sDps ?? '—';
+
+/* TOTAL */
+if ([sQty, sOtd, sMethod, sPrem, sDps].some(v => v === null)) {
+document.getElementById('total-score').textContent = '—';
+return;
+}
+
+const total = sQty + sOtd + sMethod + sPrem + sDps;
+document.getElementById('total-score').textContent = 100 - total;
+}
+
+/* SAVE (🔥 FIX IMPORTANT PART) */
+function save() {
+    const month = document.getElementById('del-month').value;
+    const year = document.getElementById('del-year').value;
+
+    if (!month || !year) {
+        alert("Pilih bulan & tahun!");
+        return;
+    }
+
+    const ord = document.getElementById('qty-ord').value;
+    const rec = document.getElementById('qty-rec').value;
+
+    const data = {
+        date: `${year}-${month}`,
+        supplier: document.getElementById('supplier').value,
+        po: document.getElementById('po-num').value,
+
+        qtyOrdered: ord,      // 🔥 FIX
+        qtyReceived: rec,     // 🔥 FIX (INI YANG QC PAKAI)
+
+        fulfillment: document.getElementById('fulfillment').value,
+        qty: document.getElementById('s-qty').textContent,
+
+        otd: document.getElementById('s-otd').textContent,
+        method: document.getElementById('s-method').textContent,
+        premium: document.getElementById('premium').value || 0,
+        dps: document.getElementById('s-dps').textContent,
+        total: document.getElementById('total-score').textContent
+    };
+
+    let history = JSON.parse(localStorage.getItem("deliveryData")) || [];
+    history.push(data);
+    localStorage.setItem("deliveryData", JSON.stringify(history));
+
+    document.getElementById("popup").style.display = "flex";
+}
+
+function closePopup() {
+document.getElementById("popup").style.display = "none";
+}
+
+function toggleSidebar() {
+document.querySelector(".sidebar").classList.toggle("hide");
+document.querySelector(".content").classList.toggle("full");
+}
+
+function logout() {
+localStorage.removeItem("isLogin");
+window.location.href = "login.html";
+}
+
+</script>
+
+</body>
+</html>

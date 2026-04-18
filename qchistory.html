@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>QC History</title>
+
+<link rel="stylesheet" href="layout.css">
+<link rel="stylesheet" href="qchistory.css">
+
+</head>
+
+<body>
+
+<header>
+    <div style="display:flex; align-items:center; gap:15px;">
+        <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+        <div class="title">Supplier Performance Tracker System</div>
+    </div>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+</header>
+
+<div class="container">
+
+<div class="sidebar">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="#">Supplier Ranking</a>
+    <a href="report.html">Summary Report</a>
+    <a href="delivery.html">Delivery</a>
+    <a href="delivhistory.html">Delivery History</a>
+    <a href="qcinspection.html">QC Inspection</a>
+    <a href="qchistory.html" class="active">QC History</a>
+</div>
+
+<div class="content">
+
+<div class="topbar">
+    <h1>QC History</h1>
+</div>
+
+<!-- FILTER -->
+<div class="filter-box">
+
+    <div class="dropdown">
+        <input type="text" id="supplierSearch"
+        placeholder="Select Supplier..."
+        onkeyup="filterSupplier()"
+        onclick="toggleDropdown()">
+
+        <div id="dropdownList" class="dropdown-list"></div>
+    </div>
+
+    <select id="monthFilter">
+        <option value="">All Month</option>
+        <option value="01">January</option>
+        <option value="02">February</option>
+        <option value="03">March</option>
+        <option value="04">April</option>
+        <option value="05">May</option>
+        <option value="06">June</option>
+        <option value="07">July</option>
+        <option value="08">August</option>
+        <option value="09">September</option>
+        <option value="10">October</option>
+        <option value="11">November</option>
+        <option value="12">December</option>
+    </select>
+
+    <select id="yearFilter"></select>
+
+</div>
+
+<!-- ✅ FIX UTAMA ADA DI SINI -->
+<div class="history-layout">
+
+    <!-- LEFT: SUPPLIER LIST (PAKAI WRAPPER) -->
+    <div class="supplier-list">
+        <div id="supplier-list"></div>
+    </div>
+
+    <!-- RIGHT: DETAIL -->
+    <div id="qc-detail"></div>
+
+</div>
+
+</div>
+</div>
+
+<script>
+
+/* BASIC */
+function logout(){
+    localStorage.removeItem("isLogin");
+    window.location.href="login.html";
+}
+
+function toggleSidebar(){
+    document.querySelector(".sidebar").classList.toggle("hide");
+    document.querySelector(".content").classList.toggle("full");
+}
+
+/* DATA */
+let qcData =
+JSON.parse(localStorage.getItem("qcData")) ||
+JSON.parse(localStorage.getItem("qcInspectionData")) || [];
+
+/* SORT */
+qcData.sort((a,b)=>new Date(b.date)-new Date(a.date));
+
+/* YEAR */
+const yearFilter=document.getElementById("yearFilter");
+const now=new Date().getFullYear();
+
+for(let i=now-3;i<=now+2;i++){
+    let opt=document.createElement("option");
+    opt.value=i;
+    opt.textContent=i;
+    if(i===now) opt.selected=true;
+    yearFilter.appendChild(opt);
+}
+
+/* DROPDOWN */
+let selectedSupplier="";
+
+function toggleDropdown(){
+    const list=document.getElementById("dropdownList");
+    list.style.display=list.style.display==="block"?"none":"block";
+}
+
+function buildDropdown(data){
+    const list=document.getElementById("dropdownList");
+    list.innerHTML="";
+
+    const suppliers=[...new Set(data.map(d=>d.supplier))];
+
+    suppliers.forEach(s=>{
+        const div=document.createElement("div");
+        div.className="option";
+        div.textContent=s;
+
+        div.onclick=()=>{
+            document.getElementById("supplierSearch").value=s;
+            selectedSupplier=s.toLowerCase();
+            list.style.display="none";
+            applyFilter();
+        };
+
+        list.appendChild(div);
+    });
+}
+
+function filterSupplier(){
+    const input=document.getElementById("supplierSearch").value.toLowerCase();
+
+    selectedSupplier=input;
+
+    const filtered=qcData.filter(d=>
+        (d.supplier||"").toLowerCase().includes(input)
+    );
+
+    buildDropdown(filtered);
+    applyFilter();
+}
+
+/* CLOSE DROPDOWN */
+document.addEventListener("click",function(e){
+    if(!document.querySelector(".dropdown").contains(e.target)){
+        document.getElementById("dropdownList").style.display="none";
+    }
+});
+
+/* LIST */
+let activeSupplier=null;
+
+function renderSupplierList(filtered){
+    const container=document.getElementById("supplier-list");
+    container.innerHTML="";
+
+    const suppliers=[...new Set(filtered.map(d=>d.supplier))];
+
+    suppliers.forEach(s=>{
+        const div=document.createElement("div");
+        div.className="supplier-item";
+        div.textContent=s;
+
+        div.onclick=()=>{
+            if(activeSupplier===s){
+                document.getElementById("qc-detail").innerHTML="";
+                activeSupplier=null;
+            }else{
+                activeSupplier=s;
+                showDetail(s,filtered);
+            }
+        };
+
+        container.appendChild(div);
+    });
+}
+
+/* ===== FIX MAPPING (INI DOANG TAMBAHAN) ===== */
+function getRankLabel(val){
+    if(val == 25) return "A";
+    if(val == 10) return "B";
+    if(val == 5) return "C";
+    return val;
+}
+
+function getFppkLabel(val){
+    if(val == 0) return "No Problem / On Time";
+    if(val == 10) return "Delay";
+    if(val == 20) return "No Reply";
+    return val;
+}
+
+/* DETAIL */
+function showDetail(supplier,dataset){
+
+    const month=document.getElementById("monthFilter").value;
+    const year=document.getElementById("yearFilter").value;
+
+    const filtered=dataset.filter(d=>d.supplier===supplier);
+
+    let html="";
+    const grouped={};
+
+    filtered.forEach(d=>{
+        if(!grouped[d.date]) grouped[d.date]=[];
+        grouped[d.date].push(d);
+    });
+
+    Object.keys(grouped)
+    .sort((a,b)=>new Date(b)-new Date(a))
+    .forEach(date=>{
+
+        const [y,m]=date.split("-");
+
+        if(month && m!==month) return;
+        if(year && y!==year) return;
+
+        const d=grouped[date][0];
+
+        html+=`
+        <div class="table-card" style="margin-bottom:20px;">
+        <h3>${supplier} - ${date}</h3>
+
+        <table>
+            <tr><th colspan="3">QUALITY</th></tr>
+
+            <tr>
+                <td rowspan="2">LINE STOP</td>
+                <td>STAT</td>
+                <td>${d.lineStop==40?"YES":"NO"}</td>
+            </tr>
+            <tr>
+                <td>POINT</td>
+                <td>${d.lineStop}</td>
+            </tr>
+
+            <tr>
+                <td rowspan="4">PPM</td>
+                <td>NG</td>
+                <td>${d.ng}</td>
+            </tr>
+            <tr>
+                <td>SUPPLY</td>
+                <td>${d.supply}</td>
+            </tr>
+            <tr>
+                <td>PPM</td>
+                <td>${d.ppm}</td>
+            </tr>
+            <tr>
+                <td>POINT</td>
+                <td>${d.ppmScore}</td>
+            </tr>
+
+            <tr>
+                <td rowspan="2">PROBLEM RANK</td>
+                <td>RANK</td>
+                <td>${getRankLabel(d.rank)}</td>
+            </tr>
+            <tr>
+                <td>POINT</td>
+                <td>${d.rank}</td>
+            </tr>
+
+            <tr>
+                <td rowspan="2">FPPK REPLY</td>
+                <td>STAT</td>
+                <td>${getFppkLabel(d.fppk)}</td>
+            </tr>
+            <tr>
+                <td>POINT</td>
+                <td>${d.fppk}</td>
+            </tr>
+
+            <tr>
+                <td colspan="2"><b>TOTAL POINT</b></td>
+                <td><b>${d.total}</b></td>
+            </tr>
+
+        </table>
+        </div>
+        `;
+    });
+
+    document.getElementById("qc-detail").innerHTML=html;
+}
+
+/* FILTER */
+function applyFilter(){
+
+    const month=document.getElementById("monthFilter").value;
+    const year=document.getElementById("yearFilter").value;
+
+    const filtered=qcData.filter(d=>{
+        const [y,m]=d.date.split("-");
+        return(
+            (!selectedSupplier || (d.supplier||"").toLowerCase().includes(selectedSupplier)) &&
+            (!month || m===month) &&
+            (!year || y===year)
+        );
+    });
+
+    renderSupplierList(filtered);
+}
+
+/* INIT */
+buildDropdown(qcData);
+applyFilter();
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Delivery History</title>
+
+<link rel="stylesheet" href="layout.css">
+<link rel="stylesheet" href="delivhistory.css">
+
+
+</head>
+
+<body>
+
+<header>
+    <div style="display:flex; align-items:center; gap:15px;">
+        <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+        <div class="title">Supplier Performance Tracker System</div>
+    </div>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+</header>
+
+<div class="container">
+
+<div class="sidebar">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="#">Supplier Ranking</a>
+    <a href="report.html">Summary Report</a>
+    <a href="delivery.html">Delivery</a>
+    <a href="delivhistory.html" class="active">Delivery History</a>
+    <a href="qcinspection.html">QC Inspection</a>
+    <a href="qchistory.html">QC History</a>
+
+</div>
+
+<div class="content">
+
+<div class="topbar">
+    <h1>Delivery History</h1>
+</div>
+
+<!-- FILTER -->
+<div class="filter-box">
+
+    <div class="dropdown">
+        <input type="text" id="supplierSearch" placeholder="Select Supplier..." onkeyup="filterSupplier()" onclick="toggleDropdown()">
+        <div id="dropdownList" class="dropdown-list">
+            <div class="option">PT Supplier A</div>
+            <div class="option">PT Supplier B</div>
+            <div class="option">PT Supplier C</div>
+            <div class="option">PT Supplier D</div>
+            <div class="option">PT Supplier E</div>
+        </div>
+    </div>
+
+    <select id="monthFilter">
+        <option value="">All Month</option>
+        <option value="01">January</option>
+        <option value="02">February</option>
+        <option value="03">March</option>
+        <option value="04">April</option>
+        <option value="05">May</option>
+        <option value="06">June</option>
+        <option value="07">July</option>
+        <option value="08">August</option>
+        <option value="09">September</option>
+        <option value="10">October</option>
+        <option value="11">November</option>
+        <option value="12">December</option>
+    </select>
+
+    <select id="yearFilter"></select>
+
+</div>
+
+<div id="supplier-list"></div>
+<div id="detail-table"></div>
+
+</div>
+</div>
+
+<script>
+
+/* BASIC */
+function logout() {
+    localStorage.removeItem("isLogin");
+    window.location.href = "login.html";
+}
+function toggleSidebar() {
+    document.querySelector(".sidebar").classList.toggle("hide");
+    document.querySelector(".content").classList.toggle("full");
+}
+
+/* DATA */
+let data = JSON.parse(localStorage.getItem("deliveryData")) || [];
+
+/* YEAR */
+const yearFilter = document.getElementById("yearFilter");
+const now = new Date().getFullYear();
+
+for (let i = now - 3; i <= now + 2; i++) {
+    let opt = document.createElement("option");
+    opt.value = i;
+    opt.textContent = i;
+    if (i === now) opt.selected = true;
+    yearFilter.appendChild(opt);
+}
+
+/* FORMAT */
+function formatPeriod(dateStr) {
+    const bulan = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const [y, m] = dateStr.split("-");
+    return bulan[parseInt(m) - 1] + " " + y;
+}
+
+/* DROPDOWN */
+let selectedSupplier = "";
+
+function toggleDropdown() {
+    const list = document.getElementById("dropdownList");
+    list.style.display = list.style.display === "block" ? "none" : "block";
+}
+
+function filterSupplier() {
+    const input = document.getElementById("supplierSearch").value.toLowerCase();
+    const options = document.querySelectorAll(".option");
+
+    options.forEach(opt => {
+        opt.style.display = opt.innerText.toLowerCase().includes(input) ? "block" : "none";
+    });
+
+    selectedSupplier = input;
+    applyFilter();
+}
+
+document.querySelectorAll(".option").forEach(opt => {
+    opt.addEventListener("click", function() {
+        const val = this.innerText;
+        document.getElementById("supplierSearch").value = val;
+        selectedSupplier = val.toLowerCase();
+        document.getElementById("dropdownList").style.display = "none";
+        applyFilter();
+    });
+});
+
+/* SUPPLIER LIST */
+let activeSupplier = null;
+
+function renderSupplierList(filtered) {
+    const container = document.getElementById("supplier-list");
+    container.innerHTML = "";
+
+    const suppliers = [...new Set(filtered.map(d => d.supplier))];
+
+    suppliers.forEach(sup => {
+        const div = document.createElement("div");
+        div.className = "supplier-item";
+        div.textContent = sup;
+
+        div.onclick = () => {
+            if (activeSupplier === sup) {
+                document.getElementById("detail-table").innerHTML = "";
+                activeSupplier = null;
+            } else {
+                activeSupplier = sup;
+                showDetail(sup, filtered);
+            }
+        };
+
+        container.appendChild(div);
+    });
+}
+
+/* SHOW DETAIL (FIXED) */
+function showDetail(supplier, dataset) {
+
+    const tableDiv = document.getElementById("detail-table");
+    const month = document.getElementById("monthFilter").value;
+
+    const filtered = dataset.filter(d => d.supplier === supplier);
+
+    let html = "";
+
+    const grouped = {};
+
+    filtered.forEach(d => {
+        if (!grouped[d.date]) grouped[d.date] = [];
+        grouped[d.date].push(d);
+    });
+
+    Object.keys(grouped).forEach(period => {
+
+        const [y, m] = period.split("-");
+        if (month !== "" && m !== month) return;
+
+        const d = grouped[period][0];
+
+        html += `
+        <div class="table-card" style="margin-bottom:20px;">
+        <h3>${supplier} - ${formatPeriod(period)}</h3>
+
+        <table>
+            <tr><th colspan="3">DELIVERY</th></tr>
+
+            <tr><td>Pemenuhan Order</td><td>%</td><td>${d.fulfillment || '-'}</td></tr>
+            <tr><td></td><td>Index</td><td>${d.qty || '-'}</td></tr>
+
+            <tr><td>OTD</td><td>Day</td><td>${d.otdText || '-'}</td></tr>
+            <tr><td></td><td>Index</td><td>${d.otd || '-'}</td></tr>
+
+            <tr><td>Method</td><td></td><td>${d.methodText || '-'}</td></tr>
+            <tr><td></td><td>Index</td><td>${d.method || '-'}</td></tr>
+
+            <tr><td>Premium</td><td></td><td>${d.premium || '0'}</td></tr>
+            <tr><td></td><td>Index</td><td>${d.premiumIndex || '-'}</td></tr>
+
+            <tr><td>DPS</td><td></td><td>${d.dpsText || '-'}</td></tr>
+            <tr><td></td><td>Index</td><td>${d.dps || '-'}</td></tr>
+
+            <tr><td colspan="2"><b>Score</b></td><td>${d.total || '-'}</td></tr>
+        </table>
+        </div>
+        `;
+    });
+
+    tableDiv.innerHTML = html;
+}
+
+/* FILTER */
+function applyFilter() {
+
+    const keyword = selectedSupplier;
+    const month = document.getElementById("monthFilter").value;
+    const year = document.getElementById("yearFilter").value;
+
+    const filtered = data.filter(d => {
+        if (!d.date) return false;
+
+        const [y, m] = d.date.split("-");
+
+        return (keyword === "" || d.supplier.toLowerCase().includes(keyword))
+            && (month === "" || m === month)
+            && (year === "" || y == year);
+    });
+
+    renderSupplierList(filtered);
+}
+
+/* EVENT */
+document.getElementById("monthFilter").addEventListener("change", applyFilter);
+document.getElementById("yearFilter").addEventListener("change", applyFilter);
+
+/* INIT */
+applyFilter();
+
+</script>
+
+</body>
+</html>

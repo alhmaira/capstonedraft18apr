@@ -1,0 +1,98 @@
+body {
+    margin: 0;
+    font-family: "Segoe UI", Tahoma, sans-serif;
+    color: #1e2a45;
+    background: #f5f7fa;
+}
+
+/* HEADER */
+header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    box-sizing: border-box; 
+    background: linear-gradient(135deg, #1a3a8f, #2d5fde);
+    color: white;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    z-index: 1000;
+}
+
+
+.title {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.logout-btn {
+    background: white;
+    color: #2d5fde;
+    border: none;
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 15px;
+}
+
+/* LAYOUT */
+.container {
+    margin-top: 70px; /* tinggi header */
+}
+
+/* SIDEBAR */
+.sidebar {
+    position: fixed;   
+    top: 60px;         
+    left: 0;
+    width: 220px;
+    height: 100vh;
+    background: white;
+    padding: 25px 15px;
+    transition: transform 0.3s ease;
+    border-right: 1px solid #e5e9f2; 
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
+}
+
+/* HIDE */
+.sidebar.hide {
+    transform: translateX(-100%);
+}
+
+.sidebar a {
+    display: block;
+    padding: 12px 15px;
+    margin-bottom: 12px;
+    text-decoration: none;
+    color: #333;
+    border-radius: 6px;
+    font-size: 18px;
+}
+
+.sidebar a:hover {
+    background: #e6ebff;
+}
+
+/* CONTENT */
+.content {
+    margin-left: 250px;   /* awalnya geser */
+    padding: 20px 30px;
+    transition: 0.3s;
+}
+
+/* FULL MODE */
+.content.full {
+    margin-left: 0;
+}
+
+
+/* MENU BUTTON */
+.menu-btn {
+    background: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 18px;
+}

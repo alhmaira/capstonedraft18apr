@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Summary Report</title>
+
+<link rel="stylesheet" href="layout.css">
+<link rel="stylesheet" href="report.css">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+
+<body>
+
+<header>
+    <div style="display:flex; align-items:center; gap:15px;">
+        <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+        <div class="title">Supplier Performance Tracker System</div>
+    </div>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+</header>
+
+<div class="container">
+
+<div class="sidebar">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="#">Supplier Ranking</a>
+    <a href="report.html" class="active">Summary Report</a>
+    <a href="delivery.html">Delivery</a>
+    <a href="delivhistory.html">Delivery History</a>
+    <a href="qcinspection.html">QC Inspection</a>
+    <a href="qchistory.html">QC History</a>
+</div>
+
+<div class="content">
+
+<div class="topbar">
+    <h1>Supplier Performance Report</h1>
+</div>
+
+<!-- FILTER -->
+<div class="filter-box">
+<select id="supplier"></select>
+
+<select id="month">
+  <option value="">All Month</option>
+  <option value="01">Jan</option><option value="02">Feb</option>
+  <option value="03">Mar</option><option value="04">Apr</option>
+  <option value="05">May</option><option value="06">Jun</option>
+  <option value="07">Jul</option><option value="08">Aug</option>
+  <option value="09">Sep</option><option value="10">Oct</option>
+  <option value="11">Nov</option><option value="12">Dec</option>
+</select>
+
+<select id="year"></select>
+</div>
+
+<!-- REPORT -->
+<div id="reportArea" class="report-box"></div>
+
+
+
+<button class="print-btn" onclick="downloadPDF()">🖨 Print Report</button>
+
+</div>
+</div>
+
+<script>
+
+/* BASIC */
+function logout(){
+    localStorage.removeItem("isLogin");
+    window.location.href="login.html";
+}
+function toggleSidebar(){
+    document.querySelector(".sidebar").classList.toggle("hide");
+    document.querySelector(".content").classList.toggle("full");
+}
+
+/* DATA */
+const qc = JSON.parse(localStorage.getItem("qcData")) || [];
+const delivery = JSON.parse(localStorage.getItem("deliveryData")) || [];
+
+/* INIT */
+function initSupplier(){
+  const el = document.getElementById("supplier");
+  const list = [...new Set([...qc.map(d=>d.supplier), ...delivery.map(d=>d.supplier)])];
+
+  list.forEach(s=>{
+    let o=document.createElement("option");
+    o.value=s;
+    o.textContent=s;
+    el.appendChild(o);
+  });
+
+  if(list.length) el.value = list[0]; // default pilih pertama
+}
+
+function initYear(){
+  const y = document.getElementById("year");
+  const now = new Date().getFullYear();
+
+  for(let i=now-3;i<=now+2;i++){
+    let o=document.createElement("option");
+    o.value=i;
+    o.textContent=i;
+    if(i===now) o.selected=true;
+    y.appendChild(o);
+  }
+}
+
+/* FILTER */
+function getData(arr,s,m,y){
+  return arr.filter(d=>{
+    if(!d.date) return false;
+    const [yy,mm] = d.date.split("-");
+    return d.supplier===s && (!m||mm===m) && (!y||yy==y);
+  });
+}
+
+/* LABEL */
+function rankLabel(v){
+  if(v==25) return "A";
+  if(v==10) return "B";
+  if(v==5) return "C";
+  return v;
+}
+function fppkLabel(v){
+  if(v==0) return "On Time";
+  if(v==10) return "Delay";
+  if(v==20) return "No Reply";
+  return v;
+}
+
+/* GRADE FUNCTION (BIAR GA DUPLIKAT) */
+function getGrade(score){
+  if(score === 100) return "A";
+  if(score >= 80) return "B";
+  if(score >= 60) return "C";
+  return "D";
+}
+
+/* MONTH LABEL */
+const monthName = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+/* RENDER */
+function render(){
+
+  const s = document.getElementById("supplier").value;
+  const m = document.getElementById("month").value;
+  const y = document.getElementById("year").value;
+
+  if(!s){
+    document.getElementById("reportArea").innerHTML = "<p>No Supplier</p>";
+    return;
+  }
+
+  const qData = getData(qc,s,m,y);
+  const dData = getData(delivery,s,m,y);
+
+  let periodText = m
+  ? `${monthName[parseInt(m)-1]} - ${y}`
+  : `All Month - ${y}`;
+
+    let html = `
+    <div style="text-align:center; margin-bottom:15px;">
+        <div style="font-size:22px; font-weight:700;">
+            Supplier Performance
+        </div>
+
+        <div style="font-size:18px; font-weight:600;">
+            PT Sanoh Indonesia
+        </div>
+
+        <div style="font-size:16px; margin-top:4px;">
+            ${periodText}
+        </div>
+
+        <div style="font-size:18px; font-weight:700; margin-top:10px;">
+            ${s}
+        </div>
+    </div>
+`;
+
+  /* ================= SINGLE MONTH ================= */
+  if(m){
+
+    const q = qData[0];
+    const d = dData[0];
+
+    if(!q && !d){
+      html += "<p>No Data</p>";
+    } else {
+
+      html += `<table>`;
+
+      /* QUALITY */
+      if(q){
+      html += `
+      <tr><th colspan="3">QUALITY</th></tr>
+
+      <tr><td rowspan="2">LINE STOP</td><td>STAT</td><td>${q.lineStop==40?"YES":"NO"}</td></tr>
+      <tr><td>POINT</td><td>${q.lineStop ?? 0}</td></tr>
+
+      <tr><td rowspan="4">PPM</td><td>NG</td><td>${q.ng ?? 0}</td></tr>
+      <tr><td>SUPPLY</td><td>${q.supply ?? 0}</td></tr>
+      <tr><td>PPM</td><td>${q.ppm ?? 0}</td></tr>
+      <tr><td>POINT</td><td>${q.ppmScore ?? 0}</td></tr>
+
+      <tr><td rowspan="2">RANK</td><td>TYPE</td><td>${rankLabel(q.rank)}</td></tr>
+      <tr><td>POINT</td><td>${q.rank ?? 0}</td></tr>
+
+      <tr><td rowspan="2">FPPK</td><td>STAT</td><td>${fppkLabel(q.fppk)}</td></tr>
+      <tr><td>POINT</td><td>${q.fppk ?? 0}</td></tr>
+
+      <tr><td colspan="2"><b>QC TOTAL</b></td><td><b>${q.total ?? 0}</b></td></tr>
+      `;
+      }
+
+      /* DELIVERY */
+      if(d){
+      html += `
+      <tr><th colspan="3">DELIVERY</th></tr>
+
+      <tr><td>Pemenuhan</td><td>%</td><td>${d.fulfillment ?? '-'}</td></tr>
+      <tr><td></td><td>Index</td><td>${d.qty ?? 0}</td></tr>
+
+      <tr><td>OTD</td><td>Day</td><td>${d.otdText ?? '-'}</td></tr>
+      <tr><td></td><td>Index</td><td>${d.otd ?? 0}</td></tr>
+
+      <tr><td>Method</td><td></td><td>${d.methodText ?? '-'}</td></tr>
+      <tr><td></td><td>Index</td><td>${d.method ?? 0}</td></tr>
+
+      <tr><td>Premium</td><td></td><td>${d.premium ?? 0}</td></tr>
+      <tr><td></td><td>Index</td><td>${d.premiumIndex ?? 0}</td></tr>
+
+      <tr><td>DPS</td><td></td><td>${d.dpsText ?? '-'}</td></tr>
+      <tr><td></td><td>Index</td><td>${d.dps ?? 0}</td></tr>
+
+      <tr><td colspan="2"><b>DELIVERY TOTAL</b></td><td><b>${d.total ?? 0}</b></td></tr>
+      `;
+      }
+
+      /* FINAL */
+      const qcScore = Number(q?.total ?? 0);
+      const delScore = Number(d?.total ?? 0);
+      const finalScore = (qcScore + delScore) / 2;
+      const grade = getGrade(finalScore);
+
+      html += `
+      <tr><th colspan="2">FINAL SCORE</th><th>${finalScore.toFixed(1)}</th></tr>
+      <tr><th colspan="2">GRADE</th><th>${grade}</th></tr>
+      </table>
+      `;
+    }
+
+  /* ================= ALL MONTH ================= */
+  } else {
+
+    html += `
+    <table>
+    <tr><th>Month</th><th>QC</th><th>Delivery</th><th>Final</th><th>Grade</th></tr>
+    `;
+
+    for(let i=1;i<=12;i++){
+      const mm = String(i).padStart(2,"0");
+
+      const q = qc.find(x=>x.supplier===s && x.date?.startsWith(`${y}-${mm}`));
+      const d = delivery.find(x=>x.supplier===s && x.date?.startsWith(`${y}-${mm}`));
+
+      if(q || d){
+
+        const qcScore = Number(q?.total ?? 0);
+        const delScore = Number(d?.total ?? 0);
+      const finalScore = (qcScore + delScore) / 2;
+        const grade = getGrade(finalScore);
+
+        html += `
+        <tr>
+          <td>${monthName[i-1]}</td>
+          <td>${qcScore}</td>
+          <td>${delScore}</td>
+          <td><b>${finalScore.toFixed(1)}</b></td>
+          <td><b>${grade}</b></td>
+        </tr>
+        `;
+      }
+    }
+
+    html += `</table>`;
+  }
+
+  html += `
+<br><br>
+
+<div style="
+    display:flex;
+    justify-content:space-between;
+    margin-top:50px;
+    font-size:14px;
+">
+
+    <!-- LEFT -->
+    <div style="text-align:left; width:45%;">
+        <div>Prepared by,</div>
+        <br><br>
+        <div style="border-top:1px solid #000; width:200px;"></div>
+        <div style="font-weight:600; margin-top:5px;">Purchasing Department</div>
+        <div>PT Sanoh Indonesia</div>
+    </div>
+
+    <!-- RIGHT -->
+    <div style="text-align:right; width:45%;">
+        <div>Approved by,</div>
+        <br><br>
+        <div style="border-top:1px solid #000; width:200px; margin-left:auto;"></div>
+        <div style="font-weight:600; margin-top:5px;">Management</div>
+        <div>PT Sanoh Indonesia</div>
+    </div>
+
+</div>
+`;
+
+document.getElementById("reportArea").innerHTML = html;
+
+}
+
+/* EVENT */
+["supplier","month","year"].forEach(id=>{
+  document.getElementById(id).addEventListener("change",render);
+});
+
+/* INIT */
+initSupplier();
+initYear();
+render();
+
+/* PDF */
+function downloadPDF(){
+  html2pdf().from(document.getElementById("reportArea")).save("report.pdf");
+}
+
+</script>
+
+</body>
+</html>

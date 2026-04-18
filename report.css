@@ -1,0 +1,212 @@
+/* FILTER CONTAINER */
+.filter-box {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+
+    margin-bottom: 18px;
+    padding: 14px 16px;
+
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.06);
+
+    width: fit-content;      
+    max-width: 100%;         
+}
+/* SELECT STYLE */
+.filter-box select {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #dcdcdc;
+    font-size: 13px;
+    background: #f9fafc;
+    cursor: pointer;
+    transition: 0.2s;
+    min-width: 140px;
+    height: 44px; 
+    font-size: 16px;
+}
+
+/* HOVER */
+.filter-box select:hover {
+    border-color: #1f3c88;
+    background: #fff;
+}
+
+/* FOCUS (KLIK) */
+.filter-box select:focus {
+    outline: none;
+    border-color: #1f3c88;
+    box-shadow: 0 0 0 2px rgba(31,60,136,0.15);
+}
+
+/* RESPONSIVE (biar ga berantakan kalau kecil) */
+@media (max-width: 768px) {
+    .filter-box {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filter-box select {
+        width: 100%;
+    }
+}
+
+.report-header .supplier-name {
+    text-align: center;
+    font-size: 18px;   
+    font-weight: 700;  
+    margin-top: 12px;
+    color: #02050c;    
+    letter-spacing: 0.5px;
+}
+/* CARD CONTAINER */
+.report-box {
+    background: #ffffff;
+    padding: 24px;
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    font-size: 15px;
+}
+
+/* TABLE BASE */
+.report-box table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    table-layout: fixed;
+    font-size: 13px;
+}
+
+/* BORDER + CELL */
+.report-box th,
+.report-box td {
+    border: 1px solid #e0e0e0;
+    padding: 8px 10px;
+    text-align: center;
+    font-size: 15px;
+}
+
+/* HEADER (Month QC Delivery Final Grade) */
+.summary-table th {
+    background: #1f3c88; /* biru corporate */
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.report-header {
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+    margin-top: 10px;
+}
+
+/* SECTION (QUALITY / DELIVERY) */
+.report-box th[colspan="3"] {
+    background: #f1f5fb;
+    color: #1f3c88;
+    font-size: 14px;
+    text-align: left;
+    padding-left: 12px;
+    font-size: 15px;
+}
+
+/* FIRST COLUMN (LABEL) */
+.report-box td:first-child {
+    text-align: left;
+    font-weight: 600;
+    background: #fafafa;
+    width: 110px;
+    font-size: 15px;
+}
+
+/* SECOND COLUMN */
+.report-box td:nth-child(2) {
+    width: 90px;
+    color: #555;
+    font-size: 15px;
+}
+
+/* ZEBRA ROW */
+.report-box tr:nth-child(even) td {
+    background: #fcfcfc;
+    font-size: 15px;
+}
+
+/* HOVER EFFECT (biar modern) */
+.report-box tr:hover td {
+    background: #eef4ff;
+    transition: 0.2s;
+}
+
+/* FINAL SCORE */
+.report-box tr:last-child th {
+    background: #e8f0ff;
+    font-size: 14px;
+    font-size: 15px;
+}
+
+/* GRADE WARNA */
+.report-box td:last-child {
+    font-weight: bold;
+    font-size: 15px;
+}
+
+.report-box td:contains("A") {
+    color: #2e7d32;
+}
+.report-box td:contains("B") {
+    color: #1976d2;
+}
+.report-box td:contains("C") {
+    color: #f9a825;
+}
+.report-box td:contains("D") {
+    color: #d32f2f;
+}
+
+/* ===== APPROVAL SECTION (UI) ===== */
+.approval-section {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 40px;
+    font-size: 14px;
+}
+
+.approval-left,
+.approval-right {
+    text-align: left;
+}
+
+/* ❌ default: stamp HIDDEN di UI */
+.stamp {
+    display: none;
+}
+
+/* ===== PRINT MODE ONLY ===== */
+@media print {
+
+    .approval-section {
+        display: flex;
+    }
+
+    /* ❌ tetap teks muncul */
+    .approval-left,
+    .approval-right {
+        font-size: 14px;
+    }
+
+    /* ✅ stamp hanya muncul saat print */
+    .stamp {
+        display: inline-block;
+        margin-top: 10px;
+        padding: 6px 14px;
+        border: 2px solid #000;
+        font-weight: bold;
+        transform: rotate(-10deg);
+        opacity: 0.8;
+    }
+}
